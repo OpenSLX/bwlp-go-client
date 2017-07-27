@@ -6,7 +6,7 @@ import (
 	"sync"
 	"crypto/tls"
 	"errors"
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/OpenSLX/bwlp-go-client/thrift"
 	"github.com/OpenSLX/bwlp-go-client/bwlp"
 )
 
