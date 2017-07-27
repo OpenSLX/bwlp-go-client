@@ -1,9 +1,10 @@
 package client
 
 import (
-	"crypto/tls"
 	"fmt"
+	"log"
 	"sync"
+	"crypto/tls"
 	"errors"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/OpenSLX/bwlp-go-client/bwlp"
@@ -42,18 +43,18 @@ func initClient(addr string) error {
 	}
 	transport, err = thrift.NewTSSLSocket(addr, cfg)
 	if err != nil {
-		fmt.Println("Error opening SSL socket:", err)
+		log.Printf("Error opening SSL socket: %s\n", err)
 		return err
 	}
 	// framed transport is required
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
 	transport, err = transportFactory.GetTransport(transport)
 	if err != nil {
-		fmt.Println("Error initializing transport layer:", err)
+		log.Printf("Error initializing transport layer: %s\n", err)
 		return err
 	}
 	if err := transport.Open(); err != nil {
-		fmt.Println("Error opening transport layer for reading/writing:", err)
+		log.Println("Error opening transport layer for reading/writing: %s\n", err)
 		return err
 	}
 	// binary proto is required
@@ -63,13 +64,13 @@ func initClient(addr string) error {
 	masterClient = nil
 	client := bwlp.NewMasterServerClientFactory(transport, protocolFactory)
 	if client == nil {
-		return errors.New("Thrift client factory return nil client!")
+		return fmt.Errorf("Thrift client factory return nil client!")
 	}
 	if _, err := client.Ping(); err != nil {
-		fmt.Println("Error pinging masterserver :(")
+		log.Printf("Error pinging masterserver: %s\n", err)
 		return err
   }
-	fmt.Println("## Connection established to:", addr,"##")
+	log.Printf("## Connection established to: %s ##", addr)
 	masterClient = client
 	return nil
 }
@@ -91,7 +92,7 @@ func SetEndpoint(param *MasterServerEndpoint) error {
 func GetInstance() (client *bwlp.MasterServerClient) {
 	// check that endpoint was set
 	if endpoint == nil {
-		fmt.Println("No endpoint set! Set one first.")
+		log.Printf("No endpoint set! Set one first.\n")
 		return
 	}
 	// initialize the client only once, in essence
@@ -99,7 +100,7 @@ func GetInstance() (client *bwlp.MasterServerClient) {
 	once.Do(func() {
 		masterServerAddress := fmt.Sprintf("%s:%d", endpoint.Hostname, endpoint.PortSSL)
 		if err := initClient(masterServerAddress); err != nil {
-			fmt.Println("Error initialising client:", err)
+			log.Printf("Error initialising client: %s\n", err)
 		}
 	})
 	return masterClient
