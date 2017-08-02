@@ -48,11 +48,7 @@ func initClient(addr string) error {
 	}
 	// framed transport is required
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
-	transport, err = transportFactory.GetTransport(transport)
-	if err != nil {
-		log.Printf("Error initializing transport layer: %s\n", err)
-		return err
-	}
+	transport = transportFactory.GetTransport(transport)
 	if err := transport.Open(); err != nil {
 		log.Println("Error opening transport layer for reading/writing: %s\n", err)
 		return err
