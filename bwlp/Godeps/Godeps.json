@@ -1,0 +1,12 @@
+{
+	"ImportPath": "github.com/OpenSLX/bwlp-go-client/bwlp",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "git.apache.org/thrift.git/lib/go/thrift",
+			"Comment": "0.10.0",
+			"Rev": "b2a4d4ae21c789b689dd162deb819665567f481c"
+		}
+	]
+}
