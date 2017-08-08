@@ -73,11 +73,12 @@ func initClient(addr string) error {
 
 // Global setter for the endpoint
 func SetEndpoint(param *MasterServerEndpoint) error {
+	if masterClient != nil {
+		log.Printf("MasterServer client is already initialized!\n")
+		return nil
+	}
 	if param == nil {
 		return errors.New("Invalid endpoint given!")
-	}
-	if masterClient != nil {
-		return errors.New("MasterServer client is already initialized!")
 	}
 	// TODO user-supplied endpoints should be validated abit
 	endpoint = param
