@@ -1,36 +1,21 @@
 package client
 
 import (
-	"fmt"
 	"log"
-	"sync"
 	"crypto/tls"
 	"errors"
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/OpenSLX/bwlp-go-client/bwlp"
 )
 
-type MasterServerEndpoint struct {
+type ServerEndpoint struct {
 	Hostname string
 	PortSSL int
 	PortPlain int
 }
 
-var (
-	// endpoint to the bwlp masterserver
-	endpoint *MasterServerEndpoint
-	// singleton client instance
-	masterClient *bwlp.MasterServerClient
-	// thread-safe function executor
-	once sync.Once
-)
-
-// Initialize the masterserver client using the server's
-// expected transport (framed) and protocol (binary).
-// Enforces the use of SSL for now.
-func initClient(addr string) error {
+func createTLSTransport(addr string) (*thrift.TTransport) {
 	var transport thrift.TTransport
-	var err error
 	cfg := &tls.Config{
 		MinVersion:	tls.VersionTLS12,
 		CurvePreferences:	[]tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
@@ -39,66 +24,65 @@ func initClient(addr string) error {
 			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 		},
+		InsecureSkipVerify: true,
 		PreferServerCipherSuites: true,
 	}
-	transport, err = thrift.NewTSSLSocket(addr, cfg)
+	transport, err := thrift.NewTSSLSocket(addr, cfg)
 	if err != nil {
 		log.Printf("Error opening SSL socket: %s\n", err)
-		return err
+		return nil
 	}
 	// framed transport is required
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
 	transport = transportFactory.GetTransport(transport)
 	if err := transport.Open(); err != nil {
-		log.Println("Error opening transport layer for reading/writing: %s\n", err)
-		return err
+		log.Printf("Error opening transport layer for reading/writing: %s\n", err)
+		return nil
 	}
-	// binary proto is required
+	return &transport
+}
+
+// Initialize the masterserver client using the server's
+// expected transport (framed) and protocol (binary).
+// Enforces the use of SSL for now.
+func initMasterClient(addr string) (*bwlp.MasterServerClient, error) {
+	transport := createTLSTransport(addr)
+	if transport == nil {
+		return nil, errors.New("Could not create TLS transport.")
+	}
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
 	// now retrieve a new client and test it
-	masterClient = nil
-	client := bwlp.NewMasterServerClientFactory(transport, protocolFactory)
-	if client == nil {
-		return fmt.Errorf("Thrift client factory return nil client!")
+	masterClient := bwlp.NewMasterServerClientFactory((*transport), protocolFactory)
+	if masterClient == nil {
+		return nil, errors.New("Thrift client factory return nil client!")
 	}
-	if _, err := client.Ping(); err != nil {
+	// TODO even test here?
+	if _, err := masterClient.Ping(); err != nil {
 		log.Printf("Error pinging masterserver: %s\n", err)
-		return err
+		return nil, err
   }
-	log.Printf("## Connection established to: %s ##", addr)
-	masterClient = client
-	return nil
+	log.Printf("## Connection established to master: %s ##\n", addr)
+	return masterClient, nil
 }
 
-// Global setter for the endpoint
-func SetEndpoint(param *MasterServerEndpoint) error {
-	if masterClient != nil {
-		log.Printf("MasterServer client is already initialized!\n")
-		return nil
+// Initialize the satellite client similarly to the masterserver client
+func initSatClient(addr string) (*bwlp.SatelliteServerClient, error) {
+	transport := createTLSTransport(addr)
+	if transport == nil {
+		return nil, errors.New("Could not create TLS transport.")
 	}
-	if param == nil {
-		return errors.New("Invalid endpoint given!")
-	}
-	// TODO user-supplied endpoints should be validated abit
-	endpoint = param
-	return nil
-}
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
-// Global access to the singleton client instance
-func GetInstance() (client *bwlp.MasterServerClient) {
-	// check that endpoint was set
-	if endpoint == nil {
-		log.Printf("No endpoint set! Set one first.\n")
-		return
+	// now retrieve a new client and test it
+	satClient := bwlp.NewSatelliteServerClientFactory((*transport), protocolFactory)
+	if satClient == nil {
+		return nil, errors.New("Thrift client factory return nil client!")
 	}
-	// initialize the client only once, in essence
-	// a simple kind of singleton pattern
-	once.Do(func() {
-		masterServerAddress := fmt.Sprintf("%s:%d", endpoint.Hostname, endpoint.PortSSL)
-		if err := initClient(masterServerAddress); err != nil {
-			log.Printf("Error initialising client: %s\n", err)
-		}
-	})
-	return masterClient
+	if _, err := satClient.GetSupportedFeatures(); err != nil {
+		log.Printf("Error testing sat client: %s\n", err)
+		return nil, err
+  }
+	log.Printf("## Connection established to satellite: %s ##\n", addr)
+	return satClient, nil
 }
