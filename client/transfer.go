@@ -16,7 +16,6 @@ type Transfer struct {
 	transferTo bool
 	data []byte
 	conn net.Conn
-	ti *bwlp.TransferInformation
 	connReader *bufio.Reader
 	connWriter *bufio.Writer
 
@@ -25,6 +24,8 @@ type Transfer struct {
 	startOffset int64
 	endOffset int64
 	totalTransferred int64
+
+	Ti *bwlp.TransferInformation
 }
 
 func NewTransfer(uploading bool, hostname string, ti *bwlp.TransferInformation, fileSize int64) *Transfer {
@@ -63,7 +64,6 @@ func NewTransfer(uploading bool, hostname string, ti *bwlp.TransferInformation, 
 	t := Transfer{
 		transferTo: uploading,
 		conn: conn,
-		ti: ti,
 		connReader: reader,
 		connWriter: writer,
 		fileSize: fileSize,
@@ -71,6 +71,7 @@ func NewTransfer(uploading bool, hostname string, ti *bwlp.TransferInformation, 
 		startOffset: 0,
 		endOffset: chunkSize,
 		totalTransferred: 0,
+		Ti: ti,
 	}
 	return &t
 }
@@ -122,7 +123,7 @@ func readMetaData(reader *bufio.Reader) (string, error) {
 	}
 	return string(metaBytes[:]), nil
 }
-// TODO make all these (t *Transfer) version like requestRange()
+
 func readEndOfMeta(reader *bufio.Reader) error {
 	readBytes := make([]byte, 2)
 	if err := binary.Read(reader, binary.BigEndian, readBytes); err != nil {

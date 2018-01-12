@@ -1,9 +1,6 @@
 package client
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/OpenSLX/bwlp-go-client/bwlp"
 )
 
@@ -12,14 +9,14 @@ type BwlpSpecifics struct {
 	Version *bwlp.ImageVersionDetails
 }
 
-func (spec *BwlpSpecifics) UnmarshalJSON(buf []byte) error {
-	tmp := []interface{}{&spec.Details, &spec.Version}
-	wantLen := len(tmp)
-	if err := json.Unmarshal(buf, &tmp); err != nil {
-		return err
+func GetLatestVersionDetails(imageDetails *bwlp.ImageDetailsRead) *bwlp.ImageVersionDetails {
+	if imageDetails == nil {
+		return nil
 	}
-	if g, e := len(tmp), wantLen; g != e {
-		return fmt.Errorf("Wrong number of fields for %T: Expected %d, got %d.\n", spec, g, e)
+	for _, version := range imageDetails.Versions {
+		if version.VersionId == imageDetails.LatestVersionId {
+			return version
+		}
 	}
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 	"errors"
+
 	"github.com/OpenSLX/bwlp-go-client/bwlp"
 )
 var (
@@ -18,7 +19,6 @@ type SessionHandler struct {
 	// satellite endpoint + client
 	satEndpoint *ServerEndpoint
 	satClient *bwlp.SatelliteServerClient
-	// Even expose SessionData?
 	SessionData *bwlp.ClientSessionData
 }
 
@@ -50,11 +50,13 @@ func (handler *SessionHandler) GetMasterClient() (*bwlp.MasterServerClient) {
 		handler.masterClient = client
 	})
 	if handler.masterClient == nil {
+		// TODO handle dead clients
 		log.Printf("Masterserver client lost connection!\n")
 	}
 	return handler.masterClient
 }
 
+// Helper to create a new masterclient (currently not used, will be needed when handling client's lost connections)
 func (handler *SessionHandler) newMasterClient() (*bwlp.MasterServerClient) {
 		masterServerAddress := fmt.Sprintf("%s:%d", handler.masterEndpoint.Hostname, handler.masterEndpoint.PortSSL)
 		client, err := initMasterClient(masterServerAddress)
@@ -75,7 +77,7 @@ func (handler *SessionHandler) SetSatEndpoint(param *ServerEndpoint) error {
 	if param == nil {
 		return errors.New("Invalid endpoint given!")
 	}
-	// TODO user-supplied endpoints should be validated abit
+	// TODO user-supplied endpoints should be validated
 	handler.satEndpoint = param
 	return nil
 }
@@ -97,8 +99,8 @@ func (handler *SessionHandler) GetSatClient() (*bwlp.SatelliteServerClient) {
 		handler.satClient = client
 	})
 	if handler.satClient == nil {
-		// TODO handle clients going fubar
-		log.Printf("Initialized sat client is nil, lost connection?")
+		// TODO handle dead clients
+		log.Printf("Satellite client lost connection?")
 	}
 	return handler.satClient
 }

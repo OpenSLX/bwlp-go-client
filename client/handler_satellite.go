@@ -3,6 +3,7 @@ package client
 import (
 	"log"
 	"errors"
+
 	"github.com/OpenSLX/bwlp-go-client/bwlp"
 )
 
@@ -44,7 +45,6 @@ func (handler* SessionHandler) GetImageData(imageBaseID string) (*Transfer, erro
     log.Printf("Error requesting download of image version '%s': %s\n", imageVersion.VersionId, err)
     return nil, err
   }
-	// TODO handle machine description (vmx, vbox, ...) using specifics
 	return NewTransfer(false, handler.satEndpoint.Hostname, ti, imageVersion.FileSize), nil
 }
 
@@ -57,7 +57,7 @@ func (handler* SessionHandler) CreateImage(name string) (*bwlp.UUID, error) {
 	return &newImageBaseId, nil
 }
 
-// TODO blockHashes?
+// TODO blockHashes
 func (handler* SessionHandler) UploadImageVersion(imageBaseId *bwlp.UUID, fileSize int64, machineDescription []byte) (*Transfer, error) {
 	ti, err := handler.GetSatClient().RequestImageVersionUpload(handler.SessionData.AuthToken, *imageBaseId, fileSize, nil, machineDescription)
 	if err != nil {
@@ -68,10 +68,10 @@ func (handler* SessionHandler) UploadImageVersion(imageBaseId *bwlp.UUID, fileSi
 }
 
 func (handler* SessionHandler) CancelUpload(transfer *Transfer) error {
-	if err := handler.GetSatClient().CancelUpload(transfer.ti.Token); err != nil {
+	if err := handler.GetSatClient().CancelUpload(transfer.Ti.Token); err != nil {
 		log.Printf("Error cancelling upload: %s\n", err)
 		return err
 	}
-	log.Printf("Cancelled upload for %s\n", transfer.ti.Token)
+	log.Printf("Cancelled upload for %s\n", transfer.Ti.Token)
 	return nil
 }

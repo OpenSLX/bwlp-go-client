@@ -57,7 +57,7 @@ func initMasterClient(addr string) (*bwlp.MasterServerClient, error) {
 	if masterClient == nil {
 		return nil, errors.New("Thrift client factory return nil client!")
 	}
-	// TODO even test here?
+
 	if _, err := masterClient.Ping(); err != nil {
 		log.Printf("Error pinging masterserver: %s\n", err)
 		return nil, err

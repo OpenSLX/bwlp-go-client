@@ -1,7 +1,7 @@
 package client
 
 import (
-	"fmt"
+	"errors"
 	"log"
 	"github.com/OpenSLX/bwlp-go-client/bwlp"
 )
@@ -15,7 +15,9 @@ func (handler *SessionHandler) Login(username string, password string) error {
 	}
 	// store session data for later use
 	handler.SessionData = session
-	log.Printf("** Registered satellites: %s", handler.SessionData.Satellites)
+	if len(handler.SessionData.Satellites) > 0 {
+		log.Printf("** Registered satellites: %s", handler.SessionData.Satellites)
+	}
 	// TODO handle/auto sat selection
 	return nil
 }
@@ -45,13 +47,11 @@ func (handler* SessionHandler) GetLatestVersion(imageBaseID string) (*bwlp.Image
 	if err != nil {
 		return nil, err
 	}
-	// just to make sure the LatestVersionId actually exists...
-	for _, version := range imageDetails.Versions {
-		if version.VersionId == imageDetails.LatestVersionId {
-			return version, nil
-		}
+	var imageVersion *bwlp.ImageVersionDetails
+	if imageVersion = GetLatestVersionDetails(imageDetails); imageVersion == nil {
+		return nil, errors.New("Latest version not found in image version list, this should not happen :)")
 	}
-	return nil, fmt.Errorf("Could not find latest version for '%s'\n", imageBaseID)
+	return imageVersion, nil
 }
 
 func (handler* SessionHandler) GetPublicImageData(imageBaseID string) (*Transfer, error) {
@@ -60,15 +60,9 @@ func (handler* SessionHandler) GetPublicImageData(imageBaseID string) (*Transfer
 	if err != nil {
 		return nil, err
 	}
-	// just to make sure the LatestVersionId actually exists...
-	var imageVersion *bwlp.ImageVersionDetails = nil
-	for _, version := range imageDetails.Versions {
-		if version.VersionId == imageDetails.LatestVersionId {
-			imageVersion = version
-		}
-	}
-	if imageVersion == nil {
-		return nil, fmt.Errorf("Latest version not found in image version list, this should not happen :)")
+	var imageVersion *bwlp.ImageVersionDetails
+	if imageVersion = GetLatestVersionDetails(imageDetails); imageVersion == nil {
+		return nil, errors.New("Latest version not found in image version list, this should not happen :)")
 	}
 	// Request download of that version
 	ti, err := handler.GetMasterClient().DownloadImage(handler.SessionData.AuthToken, imageVersion.VersionId)
@@ -76,7 +70,5 @@ func (handler* SessionHandler) GetPublicImageData(imageBaseID string) (*Transfer
 		log.Printf("Error requesting download of image version '%s': %s\n", imageVersion.VersionId, err)
 		return nil, err
 	}
-	// in case of vmware images, the vmx is contained within the TransferInformation
-	// TODO handle description files using specifics most likely
 	return NewTransfer(false, handler.masterEndpoint.Hostname, ti, imageVersion.FileSize), nil
 }
